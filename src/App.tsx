@@ -7,17 +7,21 @@ import LoginScreen from './components/auth/LoginScreen'
 import AppShell from './components/layout/AppShell'
 import DashboardPage from './pages/DashboardPage'
 import EventsPage from './pages/EventsPage'
-import EmployeesPage from './pages/EmployeesPage'
 import ReportsPage from './pages/ReportsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SurveysPage from './pages/SurveysPage'
 import SurveyResponderPage from './pages/SurveyResponderPage'
-import PsychTestPage from './pages/PsychTestPage'
 import SplashScreen from './components/layout/SplashScreen'
 import PWABanner from './components/layout/PWABanner'
 import ManagerSetupModal from './components/auth/ManagerSetupModal'
 import PostLoginVoiceMenu from './components/voice/PostLoginVoiceMenu'
 import EventFormModal from './components/events/EventFormModal'
+import ColaboradoresPage from './pages/ColaboradoresPage'
+import ColaboradorProfilePage from './pages/ColaboradorProfilePage'
+import ColaboradorPublicPage from './pages/ColaboradorPublicPage'
+import TestesPage from './pages/TestesPage'
+import RankingPage from './pages/RankingPage'
+import PesquisaPublicaPage from './pages/PesquisaPublicaPage'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuth()
@@ -91,8 +95,12 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
 
-        {/* Public — survey responder (no auth) */}
+        {/* Public — no auth required */}
         <Route path="/responder/:surveyId" element={<SurveyResponderPage />} />
+        <Route path="/p/:pesquisaId" element={<PesquisaPublicaPage />} />
+        <Route path="/c/:token" element={<ColaboradorPublicPage />} />
+        <Route path="/c/:token/teste/:testType" element={<ColaboradorPublicPage />} />
+        <Route path="/c/:token/pesquisa/:pesquisaId" element={<ColaboradorPublicPage />} />
 
         {/* Protected app shell */}
         <Route
@@ -105,11 +113,13 @@ export default function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="eventos" element={<EventsPage />} />
-          <Route path="colaboradores" element={<EmployeesPage />} />
+          <Route path="colaboradores" element={<ColaboradoresPage />} />
+          <Route path="colaboradores/:id" element={<ColaboradorProfilePage />} />
           <Route path="relatorios" element={<ReportsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="pesquisas" element={<SurveysPage />} />
-          <Route path="psych/:testType" element={<PsychTestPage />} />
+          <Route path="testes" element={<TestesPage />} />
+          <Route path="ranking" element={<RankingPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

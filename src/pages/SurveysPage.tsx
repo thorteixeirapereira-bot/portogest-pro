@@ -1,44 +1,31 @@
 import { useEffect, useState } from 'react'
-import { Plus, ChevronDown, ChevronUp, ClipboardCheck, BarChart2, X, Link2, Brain, ChevronRight, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useSurveysStore } from '../store/surveysStore'
-import { usePsychStore } from '../store/psychStore'
-import { useAuthStore } from '../store/authStore'
-import { useEmployeesStore } from '../store/employeesStore'
-import { ALL_TESTS } from '../lib/psychTests'
-import type { Survey, SurveyQuestion, SurveyResponse, QuestionType, PsychTestType } from '../types'
+import { Plus, ChevronDown, ChevronUp, X, Link2, Copy, CheckCircle, ClipboardCheck, BarChart2, Loader2 } from 'lucide-react'
+import { usePesquisasStore } from '../store/pesquisasSupabase'
+import { useColaboradoresStore } from '../store/colaboradoresSupabase'
+import type { DbPesquisa, DbPergunta, DbRespostaPesquisa } from '../lib/supabase'
 
-// ─── Survey Result Viewer ─────────────────────────────────────────────────────
+// ─── Survey Results ───────────────────────────────────────────────────────────
 
-function SurveyResults({ survey }: { survey: Survey }) {
-  const { questions, responses } = survey
-
+function SurveyResults({ pesquisa, respostas }: { pesquisa: DbPesquisa; respostas: DbRespostaPesquisa[] }) {
   return (
     <div className="space-y-4 mt-3">
-      <p className="text-xs text-slate-500">{responses.length} resposta{responses.length !== 1 ? 's' : ''}</p>
-      {questions.map(q => {
-        const answers = responses.map(r => r.answers[q.id]).filter(Boolean)
+      <p className="text-xs text-slate-500">{respostas.length} resposta{respostas.length !== 1 ? 's' : ''}</p>
+      {pesquisa.perguntas.map(q => {
+        const answers = respostas.map(r => r.respostas[q.id]).filter(v => v !== undefined && v !== '')
         if (answers.length === 0) return null
 
-        if (q.type === 'scale') {
+        if (q.tipo === 'scale') {
           const avg = answers.reduce((a: number, b) => a + Number(b), 0) / answers.length
-          const distribution = [1, 2, 3, 4, 5].map(v => ({
-            value: v,
-            count: answers.filter(a => Number(a) === v).length,
-          }))
-          const max = Math.max(...distribution.map(d => d.count), 1)
-
+          const dist = [1, 2, 3, 4, 5].map(v => ({ value: v, count: answers.filter(a => Number(a) === v).length }))
+          const max = Math.max(...dist.map(d => d.count), 1)
           return (
             <div key={q.id} className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-sm font-medium text-white mb-3">{q.text}</p>
+              <p className="text-sm font-medium text-white mb-2">{q.texto}</p>
               <p className="text-2xl font-bold text-amber-400 mb-2">{avg.toFixed(1)} <span className="text-sm text-slate-500">/ 5</span></p>
-              <div className="flex items-end gap-1 h-12">
-                {distribution.map(d => (
+              <div className="flex items-end gap-1 h-10">
+                {dist.map(d => (
                   <div key={d.value} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full bg-blue-600 rounded-sm transition-all"
-                      style={{ height: `${(d.count / max) * 40}px`, minHeight: d.count > 0 ? 4 : 0 }}
-                    />
+                    <div className="w-full bg-blue-600 rounded-sm" style={{ height: `${(d.count / max) * 32}px`, minHeight: d.count > 0 ? 4 : 0 }} />
                     <span className="text-[9px] text-slate-500">{d.value}</span>
                   </div>
                 ))}
@@ -46,13 +33,12 @@ function SurveyResults({ survey }: { survey: Survey }) {
             </div>
           )
         }
-
-        if (q.type === 'yesno') {
+        if (q.tipo === 'yesno') {
           const sim = answers.filter(a => a === 'sim').length
           const nao = answers.filter(a => a === 'não').length
           return (
             <div key={q.id} className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-sm font-medium text-white mb-3">{q.text}</p>
+              <p className="text-sm font-medium text-white mb-3">{q.texto}</p>
               <div className="flex gap-3">
                 <div className="flex-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-emerald-400">{sim}</p>
@@ -66,24 +52,19 @@ function SurveyResults({ survey }: { survey: Survey }) {
             </div>
           )
         }
-
-        if (q.type === 'multiple') {
+        if (q.tipo === 'multiple') {
           const countMap: Record<string, number> = {}
-          answers.forEach((a: unknown) => { const s = String(a); countMap[s] = (countMap[s] || 0) + 1 })
+          answers.forEach(a => { const s = String(a); countMap[s] = (countMap[s] || 0) + 1 })
           const max = Math.max(...Object.values(countMap), 1)
-
           return (
             <div key={q.id} className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-sm font-medium text-white mb-3">{q.text}</p>
+              <p className="text-sm font-medium text-white mb-3">{q.texto}</p>
               <div className="space-y-2">
                 {Object.entries(countMap).sort((a, b) => b[1] - a[1]).map(([opt, count]) => (
                   <div key={opt} className="flex items-center gap-2">
                     <span className="text-xs text-slate-400 w-24 truncate">{opt}</span>
                     <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${(count / max) * 100}%` }}
-                      />
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / max) * 100}%` }} />
                     </div>
                     <span className="text-xs text-white font-medium w-4 text-right">{count}</span>
                   </div>
@@ -92,11 +73,10 @@ function SurveyResults({ survey }: { survey: Survey }) {
             </div>
           )
         }
-
-        if (q.type === 'text') {
+        if (q.tipo === 'text') {
           return (
             <div key={q.id} className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-sm font-medium text-white mb-2">{q.text}</p>
+              <p className="text-sm font-medium text-white mb-2">{q.texto}</p>
               <div className="space-y-1.5">
                 {(answers as string[]).filter(Boolean).map((a, i) => (
                   <p key={i} className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-2">"{a}"</p>
@@ -105,7 +85,6 @@ function SurveyResults({ survey }: { survey: Survey }) {
             </div>
           )
         }
-
         return null
       })}
     </div>
@@ -114,19 +93,39 @@ function SurveyResults({ survey }: { survey: Survey }) {
 
 // ─── Survey Card ──────────────────────────────────────────────────────────────
 
-function SurveyCard({ survey }: { survey: Survey }) {
+function SurveyCard({ pesquisa }: { pesquisa: DbPesquisa }) {
   const [expanded, setExpanded] = useState(false)
-  const [showLink, setShowLink] = useState(false)
-  const { updateSurvey } = useSurveysStore()
+  const [showLinks, setShowLinks] = useState(false)
+  const [respostas, setRespostas] = useState<DbRespostaPesquisa[]>([])
+  const [loadingRes, setLoadingRes] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const { updatePesquisa, deletePesquisa, getRespostas, subscribeRespostas } = usePesquisasStore()
+  const { colaboradores } = useColaboradoresStore()
 
-  const toggleActive = () => updateSurvey({ ...survey, active: !survey.active })
+  const toggleActive = () => updatePesquisa(pesquisa.id, { ativa: !pesquisa.ativa })
 
-  // Generate responder URL
-  const responderUrl = `${window.location.origin}/responder/${survey.id}`
+  const loadRespostas = async () => {
+    setLoadingRes(true)
+    const r = await getRespostas(pesquisa.id)
+    setRespostas(r)
+    setLoadingRes(false)
+  }
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(responderUrl).catch(() => {})
-    setShowLink(false)
+  useEffect(() => {
+    if (expanded && respostas.length === 0) loadRespostas()
+    // Real-time subscription
+    const unsub = subscribeRespostas(pesquisa.id, (newResp) => {
+      setRespostas(prev => [newResp, ...prev])
+    })
+    return unsub
+  }, [pesquisa.id])
+
+  const publicUrl = `${window.location.origin}/p/${pesquisa.id}`
+
+  const copy = () => {
+    navigator.clipboard.writeText(publicUrl).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -134,116 +133,123 @@ function SurveyCard({ survey }: { survey: Survey }) {
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-0.5">
-            <h3 className="font-semibold text-white truncate">{survey.title}</h3>
+            <h3 className="font-semibold text-white truncate">{pesquisa.titulo}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-              survey.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'
+              pesquisa.ativa ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'
             }`}>
-              {survey.active ? 'Ativa' : 'Inativa'}
+              {pesquisa.ativa ? 'Ativa' : 'Inativa'}
             </span>
           </div>
-          {survey.description && <p className="text-xs text-slate-500">{survey.description}</p>}
+          {pesquisa.descricao && <p className="text-xs text-slate-500">{pesquisa.descricao}</p>}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={toggleActive}
-            className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${survey.active ? 'bg-blue-600' : 'bg-slate-600'}`}
-            aria-label={survey.active ? 'Desativar pesquisa' : 'Ativar pesquisa'}
-          >
-            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${survey.active ? 'translate-x-4' : ''}`} />
-          </button>
-        </div>
+        <button
+          onClick={toggleActive}
+          className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${pesquisa.ativa ? 'bg-blue-600' : 'bg-slate-600'}`}
+        >
+          <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${pesquisa.ativa ? 'translate-x-4' : ''}`} />
+        </button>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
-        <span className="flex items-center gap-1"><ClipboardCheck size={11} /> {survey.questions.length} perguntas</span>
-        <span className="flex items-center gap-1"><BarChart2 size={11} /> {survey.responses.length} respostas</span>
+        <span className="flex items-center gap-1"><ClipboardCheck size={11} /> {pesquisa.perguntas.length} perguntas</span>
+        <span className="flex items-center gap-1"><BarChart2 size={11} /> {respostas.length} respostas</span>
       </div>
 
-      {/* Actions row */}
-      <div className="flex gap-2 mb-2">
-        {survey.active && (
+      <div className="flex gap-2 flex-wrap mb-2">
+        {pesquisa.ativa && (
           <button
-            onClick={() => setShowLink(l => !l)}
-            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors bg-blue-400/10 px-3 py-1.5 rounded-lg"
+            onClick={() => setShowLinks(l => !l)}
+            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-400/10 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <Link2 size={12} />
-            Abrir p/ Resposta
+            <Link2 size={12} /> Links
           </button>
         )}
         <button
-          onClick={() => setExpanded(e => !e)}
+          onClick={() => { setExpanded(e => !e); if (!expanded) loadRespostas() }}
           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors"
         >
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {expanded ? 'Ocultar' : 'Ver resultados'}
         </button>
+        <button
+          onClick={() => deletePesquisa(pesquisa.id)}
+          className="flex items-center gap-1 text-xs text-red-400/60 hover:text-red-400 transition-colors ml-auto"
+        >
+          Excluir
+        </button>
       </div>
 
-      {/* Responder link panel */}
-      {showLink && (
+      {/* Links panel */}
+      {showLinks && (
         <div className="bg-slate-800/60 rounded-xl p-3 mb-2 space-y-2">
-          <p className="text-xs text-slate-500">Compartilhe este link com o colaborador:</p>
+          <p className="text-xs text-slate-500 font-medium">Link geral (qualquer pessoa responde):</p>
           <div className="flex gap-2">
-            <input
-              readOnly
-              value={responderUrl}
-              className="input text-xs py-1.5 flex-1"
-            />
-            <button onClick={copyLink} className="btn-primary px-3 py-1.5 text-xs !min-h-0">
-              Copiar
+            <input readOnly value={publicUrl} className="input text-xs py-1.5 flex-1" />
+            <button onClick={copy} className="btn-primary px-3 py-1.5 text-xs !min-h-0">
+              {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
             </button>
           </div>
-          <p className="text-xs text-slate-600">O colaborador não precisa de login para responder.</p>
+          {colaboradores.length > 0 && (
+            <>
+              <p className="text-xs text-slate-500 font-medium mt-2">Links por colaborador (rastreável):</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {colaboradores.map(col => {
+                  const url = `${window.location.origin}/c/${col.token_acesso}/pesquisa/${pesquisa.id}`
+                  return (
+                    <div key={col.id} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-300 flex-1 truncate">{col.nome}</span>
+                      <button onClick={() => { navigator.clipboard.writeText(url).catch(() => {}) }}
+                        className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0 flex items-center gap-1">
+                        <Copy size={10} /> Copiar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+          <p className="text-xs text-slate-600">Colaboradores não precisam de login para responder.</p>
         </div>
       )}
 
-      {expanded && <SurveyResults survey={survey} />}
+      {expanded && (
+        loadingRes ? (
+          <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-slate-500" /></div>
+        ) : (
+          <SurveyResults pesquisa={pesquisa} respostas={respostas} />
+        )
+      )}
     </div>
   )
 }
 
-// ─── New Survey Form ──────────────────────────────────────────────────────────
+// ─── New Survey Modal ─────────────────────────────────────────────────────────
 
 function NewSurveyModal({ onClose }: { onClose: () => void }) {
-  const { addSurvey } = useSurveysStore()
-  const { user } = useAuthStore()
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [questions, setQuestions] = useState<Omit<SurveyQuestion, 'id'>[]>([
-    { text: '', type: 'scale', required: true },
-  ])
+  const { addPesquisa } = usePesquisasStore()
+  const [titulo, setTitulo] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [perguntas, setPerguntas] = useState<Omit<DbPergunta, 'id'>[]>([{ texto: '', tipo: 'scale', obrigatoria: true }])
+  const [saving, setSaving] = useState(false)
 
-  const addQuestion = () =>
-    setQuestions(q => [...q, { text: '', type: 'scale', required: false }])
-
-  const removeQuestion = (i: number) =>
-    setQuestions(q => q.filter((_, idx) => idx !== i))
-
-  const updateQuestion = (i: number, updates: Partial<Omit<SurveyQuestion, 'id'>>) =>
-    setQuestions(q => q.map((item, idx) => idx === i ? { ...item, ...updates } : item))
+  const addQ = () => setPerguntas(q => [...q, { texto: '', tipo: 'scale', obrigatoria: false }])
+  const removeQ = (i: number) => setPerguntas(q => q.filter((_, idx) => idx !== i))
+  const updateQ = (i: number, u: Partial<Omit<DbPergunta, 'id'>>) =>
+    setPerguntas(q => q.map((item, idx) => idx === i ? { ...item, ...u } : item))
 
   const handleSave = async () => {
-    if (!title.trim()) return
-    const survey: Survey = {
-      id: `survey-${Date.now()}`,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      questions: questions.filter(q => q.text.trim()).map((q, i) => ({ ...q, id: `q${i + 1}` })),
-      active: true,
-      responses: [],
-      createdById: user?.id || '',
-      createdAt: new Date().toISOString(),
-    }
-    await addSurvey(survey)
+    if (!titulo.trim()) return
+    setSaving(true)
+    await addPesquisa({
+      titulo: titulo.trim(),
+      descricao: descricao.trim(),
+      tipo: 'custom',
+      perguntas: perguntas.filter(q => q.texto.trim()).map((q, i) => ({ ...q, id: `q${i + 1}` })),
+      ativa: true,
+    })
+    setSaving(false)
     onClose()
   }
-
-  const questionTypes: Array<{ value: QuestionType; label: string }> = [
-    { value: 'scale', label: 'Escala 1-5' },
-    { value: 'yesno', label: 'Sim/Não' },
-    { value: 'text', label: 'Texto livre' },
-    { value: 'multiple', label: 'Múltipla escolha' },
-  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm">
@@ -252,180 +258,58 @@ function NewSurveyModal({ onClose }: { onClose: () => void }) {
           <h2 className="text-lg font-bold text-white">Nova Pesquisa</h2>
           <button onClick={onClose} className="btn-ghost w-10 h-10 !px-0 !py-0"><X size={20} /></button>
         </div>
-
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div>
             <label className="label">Título *</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Pesquisa de Clima" className="input" />
+            <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Pesquisa de Clima" className="input" autoFocus />
           </div>
           <div>
             <label className="label">Descrição</label>
-            <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição opcional" className="input" />
+            <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Opcional" className="input" />
           </div>
-
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="label !mb-0">Perguntas</label>
-              <button onClick={addQuestion} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <button onClick={addQ} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
                 <Plus size={12} /> Adicionar
               </button>
             </div>
             <div className="space-y-3">
-              {questions.map((q, i) => (
+              {perguntas.map((q, i) => (
                 <div key={i} className="bg-slate-800/50 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-500 font-medium">Pergunta {i + 1}</span>
-                    {questions.length > 1 && (
-                      <button onClick={() => removeQuestion(i)} className="text-red-400 hover:text-red-300">
-                        <X size={14} />
-                      </button>
+                    {perguntas.length > 1 && (
+                      <button onClick={() => removeQ(i)} className="text-red-400 hover:text-red-300"><X size={14} /></button>
                     )}
                   </div>
-                  <input
-                    value={q.text}
-                    onChange={e => updateQuestion(i, { text: e.target.value })}
-                    placeholder="Texto da pergunta..."
-                    className="input text-sm"
-                  />
+                  <input value={q.texto} onChange={e => updateQ(i, { texto: e.target.value })} placeholder="Texto da pergunta..." className="input text-sm" />
                   <div className="flex gap-2">
-                    <select
-                      value={q.type}
-                      onChange={e => updateQuestion(i, { type: e.target.value as QuestionType })}
-                      className="input text-sm flex-1"
-                    >
-                      {questionTypes.map(t => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
+                    <select value={q.tipo} onChange={e => updateQ(i, { tipo: e.target.value as DbPergunta['tipo'] })} className="input text-sm flex-1">
+                      <option value="scale">Escala 1-5</option>
+                      <option value="yesno">Sim/Não</option>
+                      <option value="text">Texto livre</option>
+                      <option value="multiple">Múltipla escolha</option>
                     </select>
                     <label className="flex items-center gap-1.5 text-xs text-slate-400 flex-shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={q.required}
-                        onChange={e => updateQuestion(i, { required: e.target.checked })}
-                        className="accent-blue-500"
-                      />
+                      <input type="checkbox" checked={q.obrigatoria} onChange={e => updateQ(i, { obrigatoria: e.target.checked })} className="accent-blue-500" />
                       Obrigatória
                     </label>
                   </div>
-                  {q.type === 'multiple' && (
-                    <input
-                      placeholder="Opções separadas por vírgula"
-                      className="input text-sm"
-                      onChange={e => updateQuestion(i, { options: e.target.value.split(',').map(s => s.trim()) })}
-                    />
+                  {q.tipo === 'multiple' && (
+                    <input placeholder="Opções separadas por vírgula" className="input text-sm"
+                      onChange={e => updateQ(i, { opcoes: e.target.value.split(',').map(s => s.trim()) })} />
                   )}
                 </div>
               ))}
             </div>
           </div>
         </div>
-
         <div className="px-5 pb-5 pt-3 border-t border-slate-700/50 flex-shrink-0">
-          <button onClick={handleSave} disabled={!title.trim()} className="btn-primary w-full disabled:opacity-40">
-            Criar Pesquisa
+          <button onClick={handleSave} disabled={!titulo.trim() || saving} className="btn-primary w-full disabled:opacity-40">
+            {saving ? <><Loader2 size={16} className="animate-spin" /> Criando...</> : 'Criar Pesquisa'}
           </button>
         </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Psych Test Card ──────────────────────────────────────────────────────────
-
-function PsychTestCard({ test, resultCount }: { test: typeof ALL_TESTS[0]; resultCount: number }) {
-  const navigate = useNavigate()
-  const colorMap: Record<string, string> = {
-    blue: 'bg-blue-600',
-    purple: 'bg-purple-600',
-    green: 'bg-emerald-600',
-    pink: 'bg-pink-600',
-    red: 'bg-red-600',
-  }
-
-  return (
-    <div className="card p-4 flex items-center gap-4">
-      <div className={`w-12 h-12 ${colorMap[test.color] || 'bg-blue-600'} rounded-2xl flex items-center justify-center flex-shrink-0 text-2xl`}>
-        {test.icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-white leading-tight">{test.title}</p>
-        <p className="text-xs text-slate-500">{test.subtitle}</p>
-        {resultCount > 0 && (
-          <p className="text-xs text-blue-400 mt-0.5">{resultCount} perfil{resultCount !== 1 ? 'is' : ''} gerado{resultCount !== 1 ? 's' : ''}</p>
-        )}
-      </div>
-      <button
-        onClick={() => navigate(`/psych/${test.type}`)}
-        className="btn-primary px-4 py-2 text-xs !min-h-0 gap-1 flex-shrink-0"
-      >
-        Iniciar <ChevronRight size={14} />
-      </button>
-    </div>
-  )
-}
-
-// ─── Psych Results List ───────────────────────────────────────────────────────
-
-function PsychResultsList() {
-  const { results, deleteResult } = usePsychStore()
-  const { employees } = useEmployeesStore()
-  const navigate = useNavigate()
-
-  if (results.length === 0) return null
-
-  // Group by employee
-  const byEmployee: Record<string, typeof results> = {}
-  results.forEach(r => {
-    if (!byEmployee[r.employeeId]) byEmployee[r.employeeId] = []
-    byEmployee[r.employeeId].push(r)
-  })
-
-  const testLabels: Record<string, string> = {
-    disc: '🎯 DISC',
-    bigfive: '🧠 Big Five',
-    vac: '📚 VAC',
-    ikigai: '🌸 IKIGAI',
-    ie: '❤️ IE',
-  }
-
-  return (
-    <div>
-      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Perfis Gerados</p>
-      <div className="space-y-2">
-        {Object.entries(byEmployee).map(([empId, empResults]) => {
-          const emp = employees.find(e => e.id === empId)
-          const name = emp?.name || empResults[0]?.employeeName || 'Colaborador'
-          const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-
-          return (
-            <div key={empId} className="card p-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-xs">{initials}</span>
-                </div>
-                <p className="font-medium text-white text-sm flex-1">{name}</p>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {empResults.map(r => (
-                  <div key={r.id} className="flex items-center gap-1 bg-slate-800 rounded-lg px-2 py-1">
-                    <button
-                      onClick={() => navigate(`/psych/${r.testType}`)}
-                      className="text-xs text-slate-300"
-                    >
-                      {testLabels[r.testType] || r.testType}
-                    </button>
-                    <button
-                      onClick={() => deleteResult(r.id)}
-                      className="text-slate-600 hover:text-red-400 transition-colors ml-1"
-                    >
-                      <Trash2 size={10} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
       </div>
     </div>
   )
@@ -434,112 +318,50 @@ function PsychResultsList() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SurveysPage() {
-  const { surveys, fetchSurveys } = useSurveysStore()
-  const { results } = usePsychStore()
-  const { fetchEmployees } = useEmployeesStore()
+  const { pesquisas, fetchPesquisas, loading } = usePesquisasStore()
+  const { fetchColaboradores } = useColaboradoresStore()
   const [showForm, setShowForm] = useState(false)
-  const [activeTab, setActiveTab] = useState<'surveys' | 'tests'>('surveys')
 
-  useEffect(() => { fetchSurveys(); fetchEmployees() }, [])
+  useEffect(() => { fetchPesquisas(); fetchColaboradores() }, [])
 
-  const active = surveys.filter(s => s.active)
-  const inactive = surveys.filter(s => !s.active)
-
-  const getResultCount = (type: PsychTestType) => results.filter(r => r.testType === type).length
+  const active = pesquisas.filter(p => p.ativa)
+  const inactive = pesquisas.filter(p => !p.ativa)
 
   return (
     <div className="px-4 py-4 space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white mb-1">Pesquisas & Testes</h2>
-          <p className="text-sm text-slate-500">{surveys.length} pesquisa{surveys.length !== 1 ? 's' : ''} · {results.length} perfil{results.length !== 1 ? 'is' : ''}</p>
+          <h2 className="text-xl font-bold text-white mb-1">Pesquisas</h2>
+          <p className="text-sm text-slate-500">{pesquisas.length} pesquisa{pesquisas.length !== 1 ? 's' : ''} criada{pesquisas.length !== 1 ? 's' : ''}</p>
         </div>
-        {activeTab === 'surveys' && (
-          <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2.5 text-sm !min-h-0">
-            <Plus size={16} /> Nova
-          </button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-slate-800/60 rounded-xl p-0.5 gap-0.5">
-        <button
-          onClick={() => setActiveTab('surveys')}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'surveys' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'
-          }`}
-        >
-          <ClipboardCheck size={14} className="inline mr-1.5" />
-          Pesquisas
-        </button>
-        <button
-          onClick={() => setActiveTab('tests')}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'tests' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'
-          }`}
-        >
-          <Brain size={14} className="inline mr-1.5" />
-          Testes de Perfil
+        <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2.5 text-sm !min-h-0">
+          <Plus size={16} /> Nova
         </button>
       </div>
 
-      {/* SURVEYS TAB */}
-      {activeTab === 'surveys' && (
+      {loading && pesquisas.length === 0 ? (
+        <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-slate-500" /></div>
+      ) : pesquisas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <span className="text-5xl">📊</span>
+          <p className="text-slate-500">Nenhuma pesquisa criada</p>
+          <button onClick={() => setShowForm(true)} className="btn-primary"><Plus size={16} /> Criar Pesquisa</button>
+        </div>
+      ) : (
         <>
-          {surveys.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <span className="text-5xl">📊</span>
-              <p className="text-slate-500">Nenhuma pesquisa criada</p>
-              <button onClick={() => setShowForm(true)} className="btn-primary">
-                <Plus size={16} /> Criar Pesquisa
-              </button>
+          {active.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Ativas</p>
+              <div className="space-y-3">{active.map(p => <SurveyCard key={p.id} pesquisa={p} />)}</div>
             </div>
-          ) : (
-            <>
-              {active.length > 0 && (
-                <div>
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Ativas</p>
-                  <div className="space-y-3">
-                    {active.map(s => <SurveyCard key={s.id} survey={s} />)}
-                  </div>
-                </div>
-              )}
-              {inactive.length > 0 && (
-                <div>
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Inativas</p>
-                  <div className="space-y-3">
-                    {inactive.map(s => <SurveyCard key={s.id} survey={s} />)}
-                  </div>
-                </div>
-              )}
-            </>
+          )}
+          {inactive.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Inativas</p>
+              <div className="space-y-3">{inactive.map(p => <SurveyCard key={p.id} pesquisa={p} />)}</div>
+            </div>
           )}
         </>
-      )}
-
-      {/* PSYCH TESTS TAB */}
-      {activeTab === 'tests' && (
-        <div className="space-y-4">
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-            <p className="text-sm text-blue-300 font-medium mb-1">Como funciona</p>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Selecione um teste, escolha o colaborador e aplique presencialmente.
-              O resultado é salvo automaticamente com gráficos e insights.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {ALL_TESTS.map(test => (
-              <PsychTestCard
-                key={test.type}
-                test={test}
-                resultCount={getResultCount(test.type as PsychTestType)}
-              />
-            ))}
-          </div>
-
-          <PsychResultsList />
-        </div>
       )}
 
       {showForm && <NewSurveyModal onClose={() => setShowForm(false)} />}
