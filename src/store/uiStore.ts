@@ -5,17 +5,21 @@ interface UIState {
   theme: Theme
   showFAB: boolean
   activeTab: string
+  managerName: string | null
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
   setActiveTab: (tab: string) => void
+  setManagerName: (name: string) => void
 }
 
 const savedTheme = (localStorage.getItem('theme') as Theme) || 'dark'
+const savedManagerName = localStorage.getItem('managerName') || null
 
 export const useUIStore = create<UIState>((set) => ({
   theme: savedTheme,
   showFAB: true,
   activeTab: 'dashboard',
+  managerName: savedManagerName,
 
   toggleTheme: () =>
     set(s => {
@@ -34,4 +38,9 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setActiveTab: (activeTab) => set({ activeTab }),
+
+  setManagerName: (name) => {
+    localStorage.setItem('managerName', name)
+    set({ managerName: name })
+  },
 }))

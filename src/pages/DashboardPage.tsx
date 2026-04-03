@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useEventsStore } from '../store/eventsStore'
 import { useEmployeesStore } from '../store/employeesStore'
-import { useAuthStore } from '../store/authStore'
+import { useUIStore } from '../store/uiStore'
 import KPICards from '../components/dashboard/KPICards'
 import { EventsByCategoryChart, ScoreTrendChart, CriticalityDonutChart } from '../components/dashboard/Charts'
 import TopRanking from '../components/dashboard/TopRanking'
@@ -10,7 +10,7 @@ import Alerts from '../components/dashboard/Alerts'
 export default function DashboardPage() {
   const { events, fetchEvents, dateFilter, setDateFilter, getFilteredEvents } = useEventsStore()
   const { employees, fetchEmployees } = useEmployeesStore()
-  const { user } = useAuthStore()
+  const { managerName } = useUIStore()
 
   useEffect(() => {
     fetchEvents()
@@ -35,7 +35,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-slate-500 text-sm">Bem-vindo,</p>
-          <h2 className="text-xl font-bold text-white">{user?.name?.split(' ')[0] || 'Usuário'} 👋</h2>
+          <h2 className="text-xl font-bold text-white">{managerName?.split(' ')[0] || 'Gestor'} 👋</h2>
         </div>
         {/* Period filter */}
         <div className="flex bg-slate-800/60 rounded-xl p-0.5 gap-0.5">

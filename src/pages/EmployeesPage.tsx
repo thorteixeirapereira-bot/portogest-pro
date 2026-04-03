@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Search, Plus, User, Phone, X } from 'lucide-react'
+import { Search, Plus, User, Phone, X, Mic, MicOff } from 'lucide-react'
+import { useVoice } from '../hooks/useVoice'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -176,6 +177,10 @@ export default function EmployeesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Employee | undefined>()
 
+  const { isListening, startListening, stopListening, supported } = useVoice((cmd, text) => {
+    if (text.trim()) setSearchQuery(text.trim())
+  })
+
   useEffect(() => { fetchEmployees(); fetchEvents() }, [])
 
   const filtered = getFilteredEmployees()
@@ -200,6 +205,17 @@ export default function EmployeesPage() {
               aria-label="Buscar colaboradores"
             />
           </div>
+          {supported && (
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0 ${
+                isListening ? 'bg-red-600' : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+              aria-label="Busca por voz"
+            >
+              {isListening ? <MicOff size={16} className="text-white" /> : <Mic size={16} className="text-slate-300" />}
+            </button>
+          )}
           <button onClick={() => { setEditTarget(undefined); setShowForm(true) }} className="btn-primary px-3">
             <Plus size={18} />
           </button>

@@ -117,6 +117,19 @@ export interface Survey {
   createdAt: string
 }
 
+// ─── Psychological Tests ─────────────────────────────────────────────────────
+
+export type PsychTestType = 'disc' | 'bigfive' | 'vac' | 'ikigai' | 'ie'
+
+export interface PsychTestResult {
+  id: string
+  employeeId: string
+  employeeName: string
+  testType: PsychTestType
+  scores: Record<string, number>
+  completedAt: string
+}
+
 // ─── UI ──────────────────────────────────────────────────────────────────────
 
 export type Theme = 'dark' | 'light'
