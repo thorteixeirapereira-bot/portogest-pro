@@ -16,6 +16,7 @@ import PWABanner from './components/layout/PWABanner'
 import ManagerSetupModal from './components/auth/ManagerSetupModal'
 import PostLoginVoiceMenu from './components/voice/PostLoginVoiceMenu'
 import EventFormModal from './components/events/EventFormModal'
+import EmployeesPage from './pages/EmployeesPage'
 import ColaboradoresPage from './pages/ColaboradoresPage'
 import ColaboradorProfilePage from './pages/ColaboradorProfilePage'
 import ColaboradorPublicPage from './pages/ColaboradorPublicPage'
@@ -114,6 +115,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="eventos" element={<EventsPage />} />
           <Route path="colaboradores" element={<ColaboradoresPage />} />
+          <Route path="equipe" element={<EmployeesPage />} />
           <Route path="colaboradores/:id" element={<ColaboradorProfilePage />} />
           <Route path="relatorios" element={<ReportsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />

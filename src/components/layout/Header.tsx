@@ -11,6 +11,9 @@ const pageTitles: Record<string, string> = {
   '/relatorios': 'Relatórios',
   '/analytics': 'Analytics',
   '/pesquisas': 'Pesquisas',
+  '/testes': 'Testes de Perfil',
+  '/ranking': 'Ranking',
+  '/equipe': 'Equipe (Local)',
 }
 
 export default function Header() {
