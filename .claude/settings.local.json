@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(dir \"C:\\\\Users\\\\fjfpe\\\\OneDrive\\\\Área de Trabalho\\\\portogest-pro\\\\node_modules\\\\.bin\")",
+      "Bash(grep -E \"^tsc$|^vite$\")",
+      "Bash(npm bin:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
