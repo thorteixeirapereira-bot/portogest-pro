@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { User, ArrowRight } from 'lucide-react'
 import { useUIStore } from '../../store/uiStore'
+import { useGestorStore } from '../../store/gestorStore'
 
 interface Props {
   onDone: () => void
@@ -8,13 +9,22 @@ interface Props {
 
 export default function ManagerSetupModal({ onDone }: Props) {
   const { setManagerName } = useUIStore()
+  const { getOrCreateGestor } = useGestorStore()
   const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
+    setSaving(true)
     setManagerName(trimmed)
+    try {
+      await getOrCreateGestor(trimmed)
+    } catch {
+      // non-fatal: gestor creation failure doesn't block the app
+    }
+    setSaving(false)
     onDone()
   }
 
@@ -45,10 +55,10 @@ export default function ManagerSetupModal({ onDone }: Props) {
           </div>
           <button
             type="submit"
-            disabled={!name.trim()}
+            disabled={!name.trim() || saving}
             className="btn-primary w-full disabled:opacity-40 gap-2"
           >
-            Começar <ArrowRight size={16} />
+            {saving ? 'Configurando...' : <>Começar <ArrowRight size={16} /></>}
           </button>
         </form>
       </div>
